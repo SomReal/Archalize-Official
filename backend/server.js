@@ -48,7 +48,7 @@ async function uploadToImgur(base64Image) {
         },
         {
           headers: {
-            Authorization: `Client-ID YOUR_CLIENT_ID`, // 👈 your real client id
+            Authorization: `8dbb2ca438012eb`, // 👈 your real client id
           },
         }
       );
