@@ -2,15 +2,16 @@ const axios = require('axios');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const OpenAI = require('openai'); // ✅ correct OpenAI import
+const OpenAI = require('openai');
 
 dotenv.config();
 
 const app = express();
 app.use(cors({
-  origin: ['https://www.archalize.com', 'http://localhost:3000'], // allow your production + dev
+  origin: 'https://www.archalize.com',
   methods: ['POST'],
 }));
+
 app.use(express.json({ limit: '10mb' }));
 
 const openai = new OpenAI({
@@ -27,28 +28,27 @@ async function uploadToImgur(base64Image) {
     },
     {
       headers: {
-        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`, // ✅ using .env
+        Authorization: 'Client-ID YOUR_CLIENT_ID_HERE', // 🛑 full "Client-ID xxxxx"
       },
     }
   );
   return response.data.data.link;
 }
 
-// Critique API
 app.post('/api/critique', async (req, res) => {
   try {
     const { imageBase64 } = req.body;
 
-    const imageUrl = await uploadToImgur(imageBase64); // upload image to Imgur first
+    const imageUrl = await uploadToImgur(imageBase64);
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: 'gpt-4o',
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: [
             {
-              type: "text",
+              type: 'text',
               text: `You are an expert architecture critic. Critique this building's design focusing on:
 
 - Architectural style
@@ -57,11 +57,13 @@ app.post('/api/critique', async (req, res) => {
 - Aesthetic impact
 - Improvements to the Design
 
-Write in a clear and encouraging tone. Format into readable sections.`,
+Write clearly and break into nice sections.`,
             },
             {
-              type: "image_url",
-              image_url: { url: imageUrl },
+              type: 'image_url',
+              image_url: {
+                url: imageUrl,
+              },
             },
           ],
         },
@@ -72,13 +74,12 @@ Write in a clear and encouraging tone. Format into readable sections.`,
     res.json({ critique: response.choices[0].message.content });
   } catch (error) {
     console.error(error.response ? error.response.data : error.message);
-    res.status(500).json({ error: "Something went wrong with AI critique." });
+    res.status(500).json({ critique: null });
   }
 });
 
-// 👇 FINAL correct app.listen (ONLY ONE)
+// 🛠 THIS IS THE CORRECT ONE
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Backend server running on port ${PORT}`);
-  });
-  
+  console.log(`Backend server running on port ${PORT}`);
+});
