@@ -35,7 +35,50 @@ async function uploadToImgur(base64Image) {
     return response.data.data.link; // the public image URL
   }
   
-
+  app.post('/api/critique', async (req, res) => {
+    try {
+      const { base64Image } = req.body;
+      
+      // Upload base64 image to Imgur
+      const imgurResponse = await axios.post(
+        'https://api.imgur.com/3/image',
+        {
+          image: base64Image,
+          type: 'base64',
+        },
+        {
+          headers: {
+            Authorization: `Client-ID YOUR_CLIENT_ID`, // 👈 your real client id
+          },
+        }
+      );
+  
+      const imageUrl = imgurResponse.data.data.link;
+  
+      // Now send to OpenAI
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "You are an architecture critic. Critique this building design focusing on style, functionality, sustainability, and impact." },
+              { type: "image_url", image_url: { url: imageUrl } }
+            ],
+          },
+        ],
+        max_tokens: 1000,
+      });
+  
+      const aiReply = response.choices[0].message.content;
+      res.json({ critique: aiReply });
+  
+    } catch (error) {
+      console.error(error.response?.data || error.message);
+      res.status(500).json({ critique: null });
+    }
+  });
+  
   app.post('/api/critique', async (req, res) => {
     const { imageBase64 } = req.body;
   
