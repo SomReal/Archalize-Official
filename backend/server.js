@@ -2,17 +2,16 @@ const axios = require('axios');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const OpenAI = require('openai'); // ✅ only this OpenAI
+const OpenAI = require('openai'); // ✅ correct OpenAI import
 
 dotenv.config();
 
 const app = express();
 app.use(cors({
-    origin: 'https://www.archalize.com',
-    methods: ['POST'],
-  }));
-  
-app.use(express.json({ limit: '10mb' })); // allow bigger uploads
+  origin: ['https://www.archalize.com', 'http://localhost:3000'], // allow your production + dev
+  methods: ['POST'],
+}));
+app.use(express.json({ limit: '10mb' }));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -20,117 +19,65 @@ const openai = new OpenAI({
 
 // Upload base64 image to Imgur
 async function uploadToImgur(base64Image) {
-    const response = await axios.post(
-      'https://api.imgur.com/3/image',
-      {
-        image: base64Image,
-        type: 'base64',
+  const response = await axios.post(
+    'https://api.imgur.com/3/image',
+    {
+      image: base64Image,
+      type: 'base64',
+    },
+    {
+      headers: {
+        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`, // ✅ using .env
       },
-      {
-        headers: {
-          Authorization: `8dbb2ca438012eb`, // ⬅️ Replace this
-        },
-      }
-    );
-    return response.data.data.link; // the public image URL
-  }
-  
-  app.post('/api/critique', async (req, res) => {
-    try {
-      const { base64Image } = req.body;
-      
-      // Upload base64 image to Imgur
-      const imgurResponse = await axios.post(
-        'https://api.imgur.com/3/image',
-        {
-          image: base64Image,
-          type: 'base64',
-        },
-        {
-          headers: {
-            Authorization: `8dbb2ca438012eb`, // 👈 your real client id
-          },
-        }
-      );
-  
-      const imageUrl = imgurResponse.data.data.link;
-  
-      // Now send to OpenAI
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "You are an architecture critic. Critique this building design focusing on style, functionality, sustainability, and impact." },
-              { type: "image_url", image_url: { url: imageUrl } }
-            ],
-          },
-        ],
-        max_tokens: 1000,
-      });
-  
-      const aiReply = response.choices[0].message.content;
-      res.json({ critique: aiReply });
-  
-    } catch (error) {
-      console.error(error.response?.data || error.message);
-      res.status(500).json({ critique: null });
     }
-  });
-  
-  app.post('/api/critique', async (req, res) => {
-    const { imageBase64 } = req.body;
-  
-    try {
-      const imageUrl = await uploadToImgur(imageBase64); // upload to Imgur
-  
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `You are an expert architecture critic. Critique this building's design focusing on:
-  
-  - Architectural style
-  - Layout functionality
-  - Sustainability
-  - Aesthetic impact
-  - Improvements to the Design
-  
-  Write in a clear and encouraging tone and format the response nicely into easily readable sections. For example Improvemnts to the design start another paragraph`,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                },
-              }
-              
-            ],
-          },
-        ],
-        max_tokens: 1000,
-      });
-  
-      res.json({ critique: response.choices[0].message.content });
-    } catch (error) {
-      console.error(error.response ? error.response.data : error.message);
-      res.status(500).json({ error: "Something went wrong with AI critique." });
-    }
-  });
-  
-  
-  
-  const PORT = process.env.PORT || 5000;
+  );
+  return response.data.data.link;
+}
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Backend server running on port ${PORT}`);
-  });
-  
-app.listen(PORT, () => {
+// Critique API
+app.post('/api/critique', async (req, res) => {
+  try {
+    const { imageBase64 } = req.body;
+
+    const imageUrl = await uploadToImgur(imageBase64); // upload image to Imgur first
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `You are an expert architecture critic. Critique this building's design focusing on:
+
+- Architectural style
+- Layout functionality
+- Sustainability
+- Aesthetic impact
+- Improvements to the Design
+
+Write in a clear and encouraging tone. Format into readable sections.`,
+            },
+            {
+              type: "image_url",
+              image_url: { url: imageUrl },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1000,
+    });
+
+    res.json({ critique: response.choices[0].message.content });
+  } catch (error) {
+    console.error(error.response ? error.response.data : error.message);
+    res.status(500).json({ error: "Something went wrong with AI critique." });
+  }
+});
+
+// 👇 FINAL correct app.listen (ONLY ONE)
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
 });
