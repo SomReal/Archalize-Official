@@ -1,27 +1,40 @@
 import { OpenAI } from 'openai';
 import axios from 'axios';
 
+// Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Read Imgur client ID from environment once
+const imgurClientId = process.env.IMGUR_CLIENT_ID;
+
+// Export the API route handler
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).send('Method Not Allowed');
+    return res.status(405).json({ error: 'Method Not Allowed' }); // use JSON always
   }
 
   try {
     const { imageBase64 } = req.body;
 
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
     // Upload image to Imgur
-    const imgurResponse = await axios.post('https://api.imgur.com/3/image', {
-      image: imageBase64,
-      type: 'base64',
-    }, {
-      headers: {
-        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+    const imgurResponse = await axios.post(
+      'https://api.imgur.com/3/image',
+      {
+        image: imageBase64,
+        type: 'base64',
       },
-    });
+      {
+        headers: {
+          Authorization: `Client-ID ${imgurClientId}`,
+        },
+      }
+    );
 
     const imageUrl = imgurResponse.data.data.link;
 
@@ -32,8 +45,22 @@ export default async function handler(req, res) {
         {
           role: 'user',
           content: [
-            { type: 'text', text: 'You are an expert architecture critic. Critique this building design.' },
-            { type: 'image_url', image_url: { url: imageUrl } },
+            {
+              type: 'text',
+              text: `You are an expert architecture critic. Critique this building design focusing on:
+
+- Architectural style
+- Layout functionality
+- Sustainability
+- Aesthetic impact
+- Improvements to the Design
+
+Write clearly, in nice sections, easy to read.`,
+            },
+            {
+              type: 'image_url',
+              image_url: { url: imageUrl },
+            },
           ],
         },
       ],
@@ -43,7 +70,7 @@ export default async function handler(req, res) {
     res.status(200).json({ critique: response.choices[0].message.content });
 
   } catch (error) {
-    console.error(error.response ? error.response.data : error.message);
+    console.error('Error:', error.response?.data || error.message);
     res.status(500).json({ critique: null });
   }
 }
