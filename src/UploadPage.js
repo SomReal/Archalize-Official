@@ -22,7 +22,7 @@ function UploadPage() {
     setCritique(""); // reset old critique
     setLoading(true);
   
-    fetch('http://localhost:5000/api/critique', { 
+    fetch('/api/critique', { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64: base64Image }),
