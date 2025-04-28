@@ -1,13 +1,20 @@
 import { OpenAI } from 'openai';
 import axios from 'axios';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Read Imgur client ID from environment once
+const openaiApiKey = process.env.OPENAI_API_KEY;
 const imgurClientId = process.env.IMGUR_CLIENT_ID;
+
+if (!openaiApiKey) {
+  throw new Error('OPENAI_API_KEY is missing in environment variables');
+}
+
+if (!imgurClientId) {
+  throw new Error('IMGUR_CLIENT_ID is missing in environment variables');
+}
+
+const openai = new OpenAI({
+  apiKey: openaiApiKey,
+});
 
 // Export the API route handler
 export default async function handler(req, res) {
