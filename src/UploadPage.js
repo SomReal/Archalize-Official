@@ -22,7 +22,7 @@ function UploadPage() {
     setCritique(""); // reset old critique
     setLoading(true);
   
-    fetch('https://archalize-backend.onrender.com/api/critique', {
+    fetch('http://localhost:5000/api/critique', { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64: base64Image }),

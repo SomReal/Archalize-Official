@@ -8,9 +8,18 @@ dotenv.config();
 
 const app = express();
 app.use(cors({
-  origin: 'https://www.archalize.com',
-  methods: ['POST'],
-}));
+    origin: (origin, callback) => {
+      if (!origin || origin.startsWith('http://localhost') || origin === 'https://www.archalize.com') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['POST'],
+  }));
+  
+  
+  
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -28,7 +37,7 @@ async function uploadToImgur(base64Image) {
     },
     {
       headers: {
-        Authorization: 'Client-ID YOUR_CLIENT_ID_HERE', // 🛑 full "Client-ID xxxxx"
+        Authorization: 'Client-ID 8dbb2ca438012eb', // 🛑 full "Client-ID xxxxx"
       },
     }
   );
