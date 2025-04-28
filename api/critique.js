@@ -24,11 +24,12 @@ export default async function handler(req, res) {
 
   try {
     const { imageBase64 } = req.body;
-
+    console.log('Step 1: Got imageBase64');
+  
     if (!imageBase64) {
       return res.status(400).json({ error: 'No image provided' });
     }
-
+  
     // Upload image to Imgur
     const imgurResponse = await axios.post(
       'https://api.imgur.com/3/image',
@@ -42,9 +43,11 @@ export default async function handler(req, res) {
         },
       }
     );
-
+    console.log('Step 2: Uploaded to Imgur');
+  
     const imageUrl = imgurResponse.data.data.link;
-
+    console.log('Step 3: Got Imgur link', imageUrl);
+  
     // Ask OpenAI for critique
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -55,14 +58,14 @@ export default async function handler(req, res) {
             {
               type: 'text',
               text: `You are an expert architecture critic. Critique this building design focusing on:
-
-- Architectural style
-- Layout functionality
-- Sustainability
-- Aesthetic impact
-- Improvements to the Design
-
-Write clearly, in nice sections, easy to read.`,
+  
+  - Architectural style
+  - Layout functionality
+  - Sustainability
+  - Aesthetic impact
+  - Improvements to the Design
+  
+  Write clearly, in nice sections, easy to read.`,
             },
             {
               type: 'image_url',
@@ -73,11 +76,13 @@ Write clearly, in nice sections, easy to read.`,
       ],
       max_tokens: 1000,
     });
-
+    console.log('Step 4: Got OpenAI response');
+  
     res.status(200).json({ critique: response.choices[0].message.content });
-
+  
   } catch (error) {
-    console.error('Error:', error.response?.data || error.message);
+    console.error('🔥 Server error caught: ', error.response?.data || error.message);
     res.status(500).json({ critique: null });
   }
+  
 }
